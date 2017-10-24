@@ -1,6 +1,7 @@
 import os
 import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -12,6 +13,8 @@ app.config.update(dict(
   PASSWORD='default'
 ))
 app.config.from_envvar('MYROUTES_SETTINGS', silent=True)
+
+cors = CORS(app, resources={r"*": {"origins": "*"}})
 
 def connect_db():
   rv = sqlite3.connect(app.config['DATABASE'])
@@ -58,25 +61,37 @@ def routes():
   db = get_db()
   cur = db.execute('SELECT * FROM routes ORDER BY id DESC')
   routes = fetchall(cur)
-  return jsonify(routes)
+  return jsonify(dict(
+    result=True,
+    data=routes,
+  ))
 
 @app.route('/routes/<route_id>', methods=['GET'])
 def route(route_id):
   db = get_db()
   cur = db.execute('SELECT * FROM routes WHERE id = ?', route_id)
   route = fetchone(cur)
-  return jsonify(route)
+  return jsonify(dict(
+    result=True,
+    data=route,
+  ))
 
 @app.route('/routes', methods=['POST'])
 def create_route():
+  request_data = request.get_json(silent=True)
   db = get_db()
-  cur = db.execute('INSERT INTO routes (name) VALUES (?)', (request.form['name'],))
+  cur = db.execute('INSERT INTO routes (name) VALUES (?)', (request_data['name'],))
   db.commit()
-  return jsonify(dict(success=True))
+  return jsonify(dict(
+    result=True
+  ))
 
 @app.route('/routes/<route_id>', methods=['PUT'])
 def update_route(route_id):
+  request_data = request.get_json(silent=True)
   db = get_db()
-  cur = db.execute('UPDATE routes SET name=? WHERE id=?', (request.form['name'], route_id))
+  cur = db.execute('UPDATE routes SET name=? WHERE id=?', (request_data['name'], route_id))
   db.commit()
-  return jsonify(dict(success=True))
+  return jsonify(dict(
+    success=True
+  ))
