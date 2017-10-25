@@ -71,6 +71,11 @@ def route(route_id):
   db = get_db()
   cur = db.execute('SELECT * FROM routes WHERE id = ?', route_id)
   route = fetchone(cur)
+  cur = db.execute('SELECT * FROM places WHERE route_id = ?', route_id)
+  places = fetchall(cur)
+
+  route['places'] = places
+
   return jsonify(dict(
     result=True,
     data=route,
@@ -82,6 +87,14 @@ def create_route():
   db = get_db()
   cur = db.execute('INSERT INTO routes (name) VALUES (?)', (request_data['name'],))
   db.commit()
+
+  for place in request_data['places']:
+    db.execute(
+      'INSERT INTO places (route_id, name, latitude, longitude) VALUES (?,?,?,?)',
+      (cur.lastrowid, 'test', place['lat'], place['lng']))
+
+  db.commit()
+
   return jsonify(dict(
     result=True
   ))

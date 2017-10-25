@@ -10,5 +10,6 @@ CREATE TABLE places (
   route_id INTEGER NOT NULL,
   name VARCHAR NOT NULL,
   latitude FLOAT NOT NULL,
-  longitude FLOAT NOT NULL
+  longitude FLOAT NOT NULL,
+  FOREIGN KEY(route_id) REFERENCES routes(id)
 );
