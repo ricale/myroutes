@@ -91,7 +91,7 @@ def create_route():
   for place in request_data['places']:
     db.execute(
       'INSERT INTO places (route_id, name, latitude, longitude) VALUES (?,?,?,?)',
-      (cur.lastrowid, 'test', place['lat'], place['lng']))
+      (cur.lastrowid, place['name'], place['latitude'], place['longitude']))
 
   db.commit()
 
