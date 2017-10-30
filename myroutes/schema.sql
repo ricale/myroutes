@@ -14,3 +14,14 @@ CREATE TABLE places (
   longitude FLOAT NOT NULL,
   FOREIGN KEY(route_id) REFERENCES routes(id)
 );
+
+DROP TABLE IF EXISTS place_images;
+CREATE TABLE place_images (
+  id INTEGER PRIMARY KEY autoincrement,
+  route_id INTEGER NOT NULL,
+  place_id INTEGER NOT NULL,
+  original_file_name VARCHAR,
+  original_content_Type VARCHAR,
+  FOREIGN KEY(route_id) REFERENCES routes(id),
+  FOREIGN KEY(place_id) REFERENCES routes(id)
+)

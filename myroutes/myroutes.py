@@ -1,4 +1,5 @@
 import os
+import json
 import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash, jsonify
 from flask_cors import CORS
@@ -10,7 +11,8 @@ app.config.update(dict(
   DATABASE=os.path.join(app.root_path, 'myroutes.db'),
   SECRET_KEY='development key',
   USERNAME='admin',
-  PASSWORD='default'
+  PASSWORD='default',
+  UPLOAD_FOLDER='static/images/'
 ))
 app.config.from_envvar('MYROUTES_SETTINGS', silent=True)
 
@@ -53,7 +55,46 @@ def fetchone(cur):
   columns = [column[0] for column in cur.description]
   return dict(zip(columns, cur.fetchone()))
 
+def save_image_file(data, db, place):
+  file_name_begin_bytes = b'filename="'
+  file_name_first_pos = data.find(file_name_begin_bytes) + len(file_name_begin_bytes)
+  file_name_last_pos = data.find(b'"', file_name_first_pos)
+  file_name = data[file_name_first_pos:file_name_last_pos].decode('utf-8')
 
+  content_type_begin_bytes = b'Content-Type: '
+  content_type_first_pos = data.find(content_type_begin_bytes) + len(content_type_begin_bytes)
+  content_type_last_pos = data.find(b'\r\n', content_type_first_pos)
+  content_type = data[content_type_first_pos:content_type_last_pos].decode('utf-8')
+
+  cur = db.execute(
+    'INSERT INTO place_images (route_id, place_id, original_file_name, original_content_type) VALUES (?,?,?,?)',
+    (place['route_id'], place['id'], file_name, content_type)
+  )
+  db.commit()
+
+  first_pos = data.find(b'\xff\xd8')
+  last_pos = data.find(b'\r\n------')
+  path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], '%s-%s-%s.%s' % (place['route_id'], place['id'], cur.lastrowid, 'jpg'))
+  f = open(path, 'wb')
+  f.write(data[first_pos:last_pos])
+  f.close()
+
+def fetch_place_images(db, place_id):
+  cur = db.execute('SELECT * FROM place_images WHERE place_id = ?', place_id)
+  images = fetchall(cur)
+
+  for image in images:
+    image['url'] = url_for('static', filename = 'images/%s-%s-%s.jpg' % (image['route_id'], image['place_id'], image['id']))
+
+  return images
+
+def delete_image_file(image):
+  path = os.path.join(
+    app.root_path,
+    app.config['UPLOAD_FOLDER'],
+    '%s-%s-%s.%s' % (image['route_id'], image['place_id'], image['id'], 'jpg')
+  )
+  os.remove(path)
 
 
 @app.route('/routes', methods=['GET'])
@@ -62,7 +103,7 @@ def routes():
   cur = db.execute('SELECT * FROM routes ORDER BY id DESC')
   routes = fetchall(cur)
   return jsonify(dict(
-    result=True,
+    success=True,
     data=routes,
   ))
 
@@ -77,7 +118,7 @@ def route(route_id):
   route['places'] = places
 
   return jsonify(dict(
-    result=True,
+    success=True,
     data=route,
   ))
 
@@ -96,7 +137,7 @@ def create_route():
   db.commit()
 
   return jsonify(dict(
-    result=True
+    success=True
   ))
 
 @app.route('/routes/<route_id>', methods=['PUT'])
@@ -105,6 +146,60 @@ def update_route(route_id):
   db = get_db()
   cur = db.execute('UPDATE routes SET name=? WHERE id=?', (request_data['name'], route_id))
   db.commit()
+  return jsonify(dict(
+    success=True
+  ))
+
+
+@app.route('/places/<place_id>')
+def place(place_id):
+  db = get_db()
+  cur = db.execute('SELECT * FROM places WHERE id = ?', place_id)
+  place = fetchone(cur)
+
+  place['images'] = fetch_place_images(db, place_id)
+
+  return jsonify(dict(
+    success=True,
+    data=place,
+  ))
+
+# @app.route('/places/<place_id>', methods=['POST'])
+# def update_place(place_id):
+#   db = get_db()
+#   cur = db.execute('SELECT * FROM places WHERE id = ?', place_id)
+#   place = fetchone(cur)
+
+#   place['images'] = fetch_place_images(db, place_id)
+
+#   return jsonify(dict(
+#     success=True,
+#     data=place
+#   ))
+
+@app.route('/places/<place_id>/images', methods=['POST'])
+def create_place_image(place_id):
+  db = get_db()
+  cur = db.execute('SELECT * FROM places WHERE id = ?', place_id)
+  place = fetchone(cur)
+
+  save_image_file(request.data, db, place)
+
+  return jsonify(dict(
+    success=True
+  ))
+
+@app.route('/place_images/<image_id>', methods=['DELETE'])
+def delete_place_image(image_id):
+  db = get_db()
+  cur = db.execute('SELECT * FROM place_images WHERE id = ?', image_id)
+  image = fetchone(cur)
+
+  delete_image_file(image)
+
+  cur = db.execute('DELETE FROM place_images WHERE id = ?', image_id)
+  db.commit()
+
   return jsonify(dict(
     success=True
   ))
