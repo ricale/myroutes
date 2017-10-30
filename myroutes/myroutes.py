@@ -12,7 +12,7 @@ app.config.update(dict(
   SECRET_KEY='development key',
   USERNAME='admin',
   PASSWORD='default',
-  UPLOAD_FOLDER='static/images/'
+  UPLOAD_FOLDER='static/pictures/'
 ))
 app.config.from_envvar('MYROUTES_SETTINGS', silent=True)
 
@@ -84,7 +84,7 @@ def fetch_place_images(db, place_id):
   images = fetchall(cur)
 
   for image in images:
-    image['url'] = url_for('static', filename = 'images/%s-%s-%s.jpg' % (image['route_id'], image['place_id'], image['id']))
+    image['url'] = url_for('static', filename = 'pictures/%s-%s-%s.jpg' % (image['route_id'], image['place_id'], image['id']))
 
   return images
 
