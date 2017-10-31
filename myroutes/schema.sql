@@ -1,7 +1,8 @@
 DROP TABLE IF EXISTS routes;
 CREATE TABLE routes (
   id INTEGER PRIMARY KEY autoincrement,
-  name VARCHAR NOT NULL
+  name VARCHAR NOT NULL,
+  deleted BOOLEAN NOT NULL DEFAULT 0
 );
 
 DROP TABLE IF EXISTS places;

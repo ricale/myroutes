@@ -100,7 +100,7 @@ def delete_image_file(image):
 @app.route('/routes', methods=['GET'])
 def routes():
   db = get_db()
-  cur = db.execute('SELECT * FROM routes ORDER BY id DESC')
+  cur = db.execute('SELECT * FROM routes WHERE deleted = ? ORDER BY id DESC', (0,))
   routes = fetchall(cur)
   return jsonify(dict(
     success=True,
@@ -173,6 +173,20 @@ def update_route(route_id):
   return jsonify(dict(
     success=True
   ))
+
+@app.route('/routes/<route_id>', methods=['DELETE'])
+def delete_route(route_id):
+  db = get_db()
+  db.execute(
+    'UPDATE routes SET deleted = ? WHERE id = ?',
+    (True, route_id))
+  db.commit()
+
+  return jsonify(dict(
+    success=True
+  ))
+
+
 
 
 @app.route('/places/<place_id>')
