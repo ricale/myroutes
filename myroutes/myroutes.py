@@ -145,7 +145,18 @@ def create_route():
 def update_route(route_id):
   request_data = request.get_json(silent=True)
   db = get_db()
-  cur = db.execute('UPDATE routes SET name = ? WHERE id = ?', (request_data['name'], route_id))
+
+  db.execute('UPDATE routes SET name = ? WHERE id = ?', (request_data['name'], route_id))
+
+  cur = db.execute('SELECT * FROM places WHERE route_id = ?', (route_id,))
+  places = fetchall(cur)
+
+  requested_place_ids = [place['id'] for place in request_data['places'] if 'id' in place]
+  for place in places:
+    if place['id'] not in requested_place_ids:
+      db.execute(
+        'DELETE FROM places WHERE id = ?',
+        (place['id'],))
 
   for place in request_data['places']:
     if 'id' in place:
