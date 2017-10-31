@@ -110,9 +110,9 @@ def routes():
 @app.route('/routes/<route_id>', methods=['GET'])
 def route(route_id):
   db = get_db()
-  cur = db.execute('SELECT * FROM routes WHERE id = ?', route_id)
+  cur = db.execute('SELECT * FROM routes WHERE id = ?', (route_id,))
   route = fetchone(cur)
-  cur = db.execute('SELECT * FROM places WHERE route_id = ?', route_id)
+  cur = db.execute('SELECT * FROM places WHERE route_id = ?', (route_id,))
   places = fetchall(cur)
 
   route['places'] = places
@@ -137,7 +137,8 @@ def create_route():
   db.commit()
 
   return jsonify(dict(
-    success=True
+    success=True,
+    data=dict(id=cur.lastrowid)
   ))
 
 @app.route('/routes/<route_id>', methods=['PUT'])
