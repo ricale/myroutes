@@ -145,8 +145,20 @@ def create_route():
 def update_route(route_id):
   request_data = request.get_json(silent=True)
   db = get_db()
-  cur = db.execute('UPDATE routes SET name=? WHERE id=?', (request_data['name'], route_id))
+  cur = db.execute('UPDATE routes SET name = ? WHERE id = ?', (request_data['name'], route_id))
+
+  for place in request_data['places']:
+    if 'id' in place:
+      db.execute(
+        'UPDATE places SET name = ?, latitude = ?, longitude = ? WHERE id = ?',
+        (place['name'], place['latitude'], place['longitude'], place['id']))
+    else:
+      db.execute(
+        'INSERT INTO places (route_id, name, latitude, longitude) VALUES (?,?,?,?)',
+        (route_id, place['name'], place['latitude'], place['longitude']))
+
   db.commit()
+
   return jsonify(dict(
     success=True
   ))
@@ -165,7 +177,7 @@ def place(place_id):
     data=place,
   ))
 
-# @app.route('/places/<place_id>', methods=['POST'])
+# @app.route('/places/<place_id>', methods=['PUT'])
 # def update_place(place_id):
 #   db = get_db()
 #   cur = db.execute('SELECT * FROM places WHERE id = ?', place_id)
