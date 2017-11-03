@@ -80,7 +80,7 @@ def save_image_file(data, db, place):
   f.close()
 
 def fetch_place_images(db, place_id):
-  cur = db.execute('SELECT * FROM place_images WHERE place_id = ?', place_id)
+  cur = db.execute('SELECT * FROM place_images WHERE place_id = ?', (place_id,))
   images = fetchall(cur)
 
   for image in images:
@@ -192,7 +192,7 @@ def delete_route(route_id):
 @app.route('/places/<place_id>')
 def place(place_id):
   db = get_db()
-  cur = db.execute('SELECT * FROM places WHERE id = ?', place_id)
+  cur = db.execute('SELECT * FROM places WHERE id = ?', (place_id,))
   place = fetchone(cur)
 
   place['images'] = fetch_place_images(db, place_id)
@@ -218,7 +218,7 @@ def place(place_id):
 @app.route('/places/<place_id>/images', methods=['POST'])
 def create_place_image(place_id):
   db = get_db()
-  cur = db.execute('SELECT * FROM places WHERE id = ?', place_id)
+  cur = db.execute('SELECT * FROM places WHERE id = ?', (place_id,))
   place = fetchone(cur)
 
   save_image_file(request.data, db, place)
@@ -230,12 +230,12 @@ def create_place_image(place_id):
 @app.route('/place_images/<image_id>', methods=['DELETE'])
 def delete_place_image(image_id):
   db = get_db()
-  cur = db.execute('SELECT * FROM place_images WHERE id = ?', image_id)
+  cur = db.execute('SELECT * FROM place_images WHERE id = ?', (image_id,))
   image = fetchone(cur)
 
   delete_image_file(image)
 
-  cur = db.execute('DELETE FROM place_images WHERE id = ?', image_id)
+  cur = db.execute('DELETE FROM place_images WHERE id = ?', (image_id,))
   db.commit()
 
   return jsonify(dict(
