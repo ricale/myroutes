@@ -112,7 +112,7 @@ def route(route_id):
   db = get_db()
   cur = db.execute('SELECT * FROM routes WHERE id = ?', (route_id,))
   route = fetchone(cur)
-  cur = db.execute('SELECT * FROM places WHERE route_id = ?', (route_id,))
+  cur = db.execute('SELECT * FROM places WHERE route_id = ? ORDER BY odr', (route_id,))
   places = fetchall(cur)
 
   route['places'] = places
@@ -131,8 +131,8 @@ def create_route():
 
   for place in request_data['places']:
     db.execute(
-      'INSERT INTO places (route_id, name, latitude, longitude) VALUES (?,?,?,?)',
-      (cur.lastrowid, place['name'], place['latitude'], place['longitude']))
+      'INSERT INTO places (route_id, name, latitude, longitude, odr) VALUES (?,?,?,?,?)',
+      (cur.lastrowid, place['name'], place['latitude'], place['longitude'], place['order']))
 
   db.commit()
 
@@ -148,7 +148,7 @@ def update_route(route_id):
 
   db.execute('UPDATE routes SET name = ? WHERE id = ?', (request_data['name'], route_id))
 
-  cur = db.execute('SELECT * FROM places WHERE route_id = ?', (route_id,))
+  cur = db.execute('SELECT * FROM places WHERE route_id = ? ORDER BY odr', (route_id,))
   places = fetchall(cur)
 
   requested_place_ids = [place['id'] for place in request_data['places'] if 'id' in place]
@@ -161,12 +161,12 @@ def update_route(route_id):
   for place in request_data['places']:
     if 'id' in place:
       db.execute(
-        'UPDATE places SET name = ?, latitude = ?, longitude = ? WHERE id = ?',
-        (place['name'], place['latitude'], place['longitude'], place['id']))
+        'UPDATE places SET name = ?, latitude = ?, longitude = ?, odr = ? WHERE id = ?',
+        (place['name'], place['latitude'], place['longitude'], place['order'], place['id']))
     else:
       db.execute(
-        'INSERT INTO places (route_id, name, latitude, longitude) VALUES (?,?,?,?)',
-        (route_id, place['name'], place['latitude'], place['longitude']))
+        'INSERT INTO places (route_id, name, latitude, longitude, odr) VALUES (?,?,?,?,?)',
+        (route_id, place['name'], place['latitude'], place['longitude']), place['order'])
 
   db.commit()
 
