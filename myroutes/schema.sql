@@ -23,7 +23,8 @@ CREATE TABLE place_images (
   route_id INTEGER NOT NULL,
   place_id INTEGER NOT NULL,
   original_file_name VARCHAR,
-  original_content_Type VARCHAR,
+  original_content_type VARCHAR,
+  taken_at DATETIME,
   FOREIGN KEY(route_id) REFERENCES routes(id),
   FOREIGN KEY(place_id) REFERENCES routes(id)
 )

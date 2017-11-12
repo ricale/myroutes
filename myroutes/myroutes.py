@@ -3,6 +3,7 @@ import json
 import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash, jsonify
 from flask_cors import CORS
+from PIL import Image, ExifTags
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -55,6 +56,13 @@ def fetchone(cur):
   columns = [column[0] for column in cur.description]
   return dict(zip(columns, cur.fetchone()))
 
+def get_file_extension_from_content_type(content_type):
+  return ({
+    'image/gif': 'gif',
+    'image/png': 'png',
+    'image/jpeg': 'jpeg'
+  })[content_type]
+
 def save_image_file(data, db, place):
   file_name_begin_bytes = b'filename="'
   file_name_first_pos = data.find(file_name_begin_bytes) + len(file_name_begin_bytes)
@@ -74,17 +82,93 @@ def save_image_file(data, db, place):
 
   first_pos = data.find(b'\xff\xd8')
   last_pos = data.find(b'\r\n------')
-  path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], '%s-%s-%s.%s' % (place['route_id'], place['id'], cur.lastrowid, 'jpg'))
+  place_image_id = cur.lastrowid
+  extension = get_file_extension_from_content_type(content_type)
+  path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], '%s-%s-%s.%s' % (place['route_id'], place['id'], place_image_id, extension))
   f = open(path, 'wb')
   f.write(data[first_pos:last_pos])
   f.close()
 
+  image = Image.open(path)
+  exif = image._getexif()
+  if 36867 in exif:
+    taken_at = exif[36867]
+  elif 306 in exif:
+    taken_at = exif[306]
+  else:
+    taken_at = None
+
+  if taken_at is not None:
+    db.execute(
+      'UPDATE place_images SET taken_at = ? WHERE id = ?', (taken_at, place_image_id)
+    )
+    db.commit()
+
+  for orientation in ExifTags.TAGS.keys():
+    if ExifTags.TAGS[orientation] == 'Orientation':
+      break
+  exif = dict(image._getexif().items())
+
+  if exif[orientation] == 3:
+    image = image.rotate(180, expand=True)
+  elif exif[orientation] == 6:
+    image = image.rotate(270, expand=True)
+  elif exif[orientation] == 8:
+    image = image.rotate(90, expand=True)
+
+  image.save(path, extension)
+
+  image.thumbnail((512, 512))
+  path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], '%s-%s-%s-thumbnail-1.%s' % (place['route_id'], place['id'], place_image_id, extension))
+  image.save(path, extension)
+
+  image.thumbnail((128, 128))
+  path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], '%s-%s-%s-thumbnail-2.%s' % (place['route_id'], place['id'], place_image_id, extension))
+  image.save(path, extension)
+
+  return place_image_id
+
+def fetch_place_image(db, image_id):
+  cur = db.execute('SELECT * FROM place_images WHERE id = ?', (image_id,))
+  image = fetchone(cur)
+
+  extension = get_file_extension_from_content_type(image['original_content_type'])
+  image['url'] = url_for('static', filename = 'pictures/%s-%s-%s.%s' %
+    (image['route_id'], image['place_id'], image['id'], extension))
+  image['thumbnail1url'] = url_for('static', filename = 'pictures/%s-%s-%s-thumbnail-1.%s' %
+    (image['route_id'], image['place_id'], image['id'], extension))
+  image['thumbnail2url'] = url_for('static', filename = 'pictures/%s-%s-%s-thumbnail-2.%s' %
+    (image['route_id'], image['place_id'], image['id'], extension))
+
+  return image
+
 def fetch_place_images(db, place_id):
-  cur = db.execute('SELECT * FROM place_images WHERE place_id = ?', (place_id,))
+  cur = db.execute('SELECT * FROM place_images WHERE place_id = ? ORDER BY taken_at', (place_id,))
   images = fetchall(cur)
 
   for image in images:
-    image['url'] = url_for('static', filename = 'pictures/%s-%s-%s.jpg' % (image['route_id'], image['place_id'], image['id']))
+    extension = get_file_extension_from_content_type(image['original_content_type'])
+    image['url'] = url_for('static', filename = 'pictures/%s-%s-%s.%s' %
+      (image['route_id'], image['place_id'], image['id'], extension))
+    image['thumbnail1url'] = url_for('static', filename = 'pictures/%s-%s-%s-thumbnail-1.%s' %
+      (image['route_id'], image['place_id'], image['id'], extension))
+    image['thumbnail2url'] = url_for('static', filename = 'pictures/%s-%s-%s-thumbnail-2.%s' %
+      (image['route_id'], image['place_id'], image['id'], extension))
+
+  return images
+
+def fetch_route_images(db, route_id):
+  cur = db.execute('SELECT * FROM place_images WHERE route_id = ? ORDER BY taken_at', (route_id,))
+  images = fetchall(cur)
+
+  for image in images:
+    extension = get_file_extension_from_content_type(image['original_content_type'])
+    image['url'] = url_for('static', filename = 'pictures/%s-%s-%s.%s' %
+      (image['route_id'], image['place_id'], image['id'], extension))
+    image['thumbnail1url'] = url_for('static', filename = 'pictures/%s-%s-%s-thumbnail-1.%s' %
+      (image['route_id'], image['place_id'], image['id'], extension))
+    image['thumbnail2url'] = url_for('static', filename = 'pictures/%s-%s-%s-thumbnail-2.%s' %
+      (image['route_id'], image['place_id'], image['id'], extension))
 
   return images
 
@@ -92,7 +176,21 @@ def delete_image_file(image):
   path = os.path.join(
     app.root_path,
     app.config['UPLOAD_FOLDER'],
-    '%s-%s-%s.%s' % (image['route_id'], image['place_id'], image['id'], 'jpg')
+    '%s-%s-%s.%s' % (image['route_id'], image['place_id'], image['id'], get_file_extension_from_content_type(image['original_content_type']))
+  )
+  os.remove(path)
+
+  path = os.path.join(
+    app.root_path,
+    app.config['UPLOAD_FOLDER'],
+    '%s-%s-%s-thumbnail-1.%s' % (image['route_id'], image['place_id'], image['id'], get_file_extension_from_content_type(image['original_content_type']))
+  )
+  os.remove(path)
+
+  path = os.path.join(
+    app.root_path,
+    app.config['UPLOAD_FOLDER'],
+    '%s-%s-%s-thumbnail-2.%s' % (image['route_id'], image['place_id'], image['id'], get_file_extension_from_content_type(image['original_content_type']))
   )
   os.remove(path)
 
@@ -116,6 +214,7 @@ def route(route_id):
   places = fetchall(cur)
 
   route['places'] = places
+  route['images'] = fetch_route_images(db, route_id)
 
   return jsonify(dict(
     success=True,
@@ -221,10 +320,12 @@ def create_place_image(place_id):
   cur = db.execute('SELECT * FROM places WHERE id = ?', (place_id,))
   place = fetchone(cur)
 
-  save_image_file(request.data, db, place)
+  image_id = save_image_file(request.data, db, place)
+  image = fetch_place_image(db, image_id)
 
   return jsonify(dict(
-    success=True
+    success=True,
+    data=image
   ))
 
 @app.route('/place_images/<image_id>', methods=['DELETE'])
