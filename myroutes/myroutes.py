@@ -4,20 +4,34 @@ import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash, jsonify
 from flask_cors import CORS
 from PIL import Image, ExifTags
+import flask_login
+
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 app = Flask(__name__)
+app.secret_key = 'ea3e59e14bd7809c65d6d1f6fa4d67eb59fa8045c24efddc';
 app.config.from_object(__name__)
 
 app.config.update(dict(
   DATABASE=os.path.join(app.root_path, 'myroutes.db'),
-  SECRET_KEY='development key',
+  SECRET_KEY='ea3e59e14bd7809c65d6d1f6fa4d67eb59fa8045c24efddc',
   USERNAME='admin',
   PASSWORD='default',
-  UPLOAD_FOLDER='static/pictures/'
+  UPLOAD_FOLDER='static/pictures/',
+  CORS_SUPPORTS_CREDENTIALS=True
 ))
 app.config.from_envvar('MYROUTES_SETTINGS', silent=True)
 
 cors = CORS(app, resources={r"*": {"origins": "*"}})
+
+login_manager = flask_login.LoginManager()
+login_manager.init_app(app)
+
+class User(flask_login.UserMixin):
+  pass
+
+
 
 def connect_db():
   rv = sqlite3.connect(app.config['DATABASE'])
@@ -54,7 +68,31 @@ def fetchall(cur):
 
 def fetchone(cur):
   columns = [column[0] for column in cur.description]
-  return dict(zip(columns, cur.fetchone()))
+  fetched = cur.fetchone()
+  if fetched is None:
+    return None
+  return dict(zip(columns, fetched))
+
+
+
+@login_manager.user_loader
+def user_loader(google_id):
+  db = get_db()
+  cur = db.execute('SELECT * FROM users WHERE google_id = ?', (google_id,))
+  user = fetchone(cur)
+
+  user = User()
+  user.id        = google_id
+  user.google_id = google_id
+  # user.email     = user['email']
+  # user.name      = user['name']
+  return user
+
+# @login_manager.request_loader
+# def request_loader(request):
+#   pass
+
+
 
 def get_file_extension_from_content_type(content_type):
   return ({
@@ -206,6 +244,7 @@ def routes():
   ))
 
 @app.route('/routes/<route_id>', methods=['GET'])
+@flask_login.login_required
 def route(route_id):
   db = get_db()
   cur = db.execute('SELECT * FROM routes WHERE id = ?', (route_id,))
@@ -222,6 +261,7 @@ def route(route_id):
   ))
 
 @app.route('/routes', methods=['POST'])
+@flask_login.login_required
 def create_route():
   request_data = request.get_json(silent=True)
   db = get_db()
@@ -261,11 +301,13 @@ def update_route(route_id):
     if 'id' in place:
       db.execute(
         'UPDATE places SET name = ?, latitude = ?, longitude = ?, odr = ? WHERE id = ?',
-        (place['name'], place['latitude'], place['longitude'], place['order'], place['id']))
+        (place['name'], place['latitude'], place['longitude'], place['order'], place['id'])
+      )
     else:
       db.execute(
         'INSERT INTO places (route_id, name, latitude, longitude, odr) VALUES (?,?,?,?,?)',
-        (route_id, place['name'], place['latitude'], place['longitude']), place['order'])
+        (route_id, place['name'], place['latitude'], place['longitude'], place['order'])
+      )
 
   db.commit()
 
@@ -301,19 +343,6 @@ def place(place_id):
     data=place,
   ))
 
-# @app.route('/places/<place_id>', methods=['PUT'])
-# def update_place(place_id):
-#   db = get_db()
-#   cur = db.execute('SELECT * FROM places WHERE id = ?', place_id)
-#   place = fetchone(cur)
-
-#   place['images'] = fetch_place_images(db, place_id)
-
-#   return jsonify(dict(
-#     success=True,
-#     data=place
-#   ))
-
 @app.route('/places/<place_id>/images', methods=['POST'])
 def create_place_image(place_id):
   db = get_db()
@@ -341,4 +370,72 @@ def delete_place_image(image_id):
 
   return jsonify(dict(
     success=True
+  ))
+
+
+
+
+@app.route('/login', methods=['POST'])
+def login():
+  request_data = request.get_json(silent=True)
+  token     = request_data['token']
+  google_id = request_data['google_id']
+  email     = request_data['email']
+  name      = request_data['name']
+
+  CLIENT_ID = '891848771699-7vgvpu31bp20tqfmtk66b72ukusqfumt.apps.googleusercontent.com'
+
+  try:
+    idinfo = id_token.verify_oauth2_token(token, requests.Request(), CLIENT_ID)
+    if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+      raise ValueError('Wrong issuer.')
+    # idinfo['sub'] is google_id
+  except ValueError:
+    return jsonify(dict(
+      success=False
+    ))
+
+  db = get_db()
+  cur = db.execute('SELECT * FROM users WHERE google_id = ?', (google_id,))
+  record = fetchone(cur)
+
+  if record is None:
+    cur = db.execute(
+      'INSERT INTO users (google_id, email, name) VALUES (?,?,?)',
+      (google_id, email, name)
+    )
+    db.commit()
+
+  user = User()
+  user.id        = google_id
+  user.google_id = google_id
+  user.email     = email
+  user.name      = name
+
+  flask_login.login_user(user)
+
+  return jsonify(dict(
+    success=True,
+    data=dict(
+      google_id=google_id,
+      email=email,
+      name=name,
+    )
+  ))
+
+@app.route('/logout')
+def logout():
+  flask_login.logout_user()
+  return jsonify(dict(
+    success=True
+  ))
+
+@app.route('/users')
+def users():
+  db = get_db()
+  cur = db.execute('SELECT * FROM users ORDER BY id DESC')
+  users = fetchall(cur)
+  return jsonify(dict(
+    success=True,
+    data=users,
   ))

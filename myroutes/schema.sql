@@ -27,4 +27,13 @@ CREATE TABLE place_images (
   taken_at DATETIME,
   FOREIGN KEY(route_id) REFERENCES routes(id),
   FOREIGN KEY(place_id) REFERENCES routes(id)
-)
+);
+
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY autoincrement,
+  google_id VARCHAR,
+  email VARCHAR,
+  name VARCHAR,
+  password VARCHAR
+);

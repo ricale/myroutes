@@ -5,6 +5,10 @@ setup(
   packages=['myroutes'],
   include_package_data=True,
   install_requires=[
-    'flask'
+    'flask',
+    'flask-cors',
+    'Pillow',
+    'google-auth',
+    'flask-login'
   ]
 )
