@@ -92,6 +92,13 @@ def user_loader(google_id):
 # def request_loader(request):
 #   pass
 
+@login_manager.unauthorized_handler
+def unauthorized_handler():
+  return jsonify(dict(
+    success=False,
+    message='Login first.'
+  )), 401
+
 
 
 def get_file_extension_from_content_type(content_type):
@@ -234,6 +241,7 @@ def delete_image_file(image):
 
 
 @app.route('/routes', methods=['GET'])
+@flask_login.login_required
 def routes():
   db = get_db()
   cur = db.execute('SELECT * FROM routes WHERE deleted = ? ORDER BY id DESC', (0,))
@@ -265,7 +273,7 @@ def route(route_id):
 def create_route():
   request_data = request.get_json(silent=True)
   db = get_db()
-  cur = db.execute('INSERT INTO routes (name) VALUES (?)', (request_data['name'],))
+  cur = db.execute('INSERT INTO routes (name, user_id) VALUES (?, ?)', (request_data['name'], flask_login.current_user.id))
   db.commit()
 
   for place in request_data['places']:

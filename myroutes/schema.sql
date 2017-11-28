@@ -1,34 +1,3 @@
-DROP TABLE IF EXISTS routes;
-CREATE TABLE routes (
-  id INTEGER PRIMARY KEY autoincrement,
-  name VARCHAR NOT NULL,
-  deleted BOOLEAN NOT NULL DEFAULT 0
-);
-
-DROP TABLE IF EXISTS places;
-CREATE TABLE places (
-  id INTEGER PRIMARY KEY autoincrement,
-  route_id INTEGER NOT NULL,
-  name VARCHAR NOT NULL,
-  address VARCHAR,
-  latitude FLOAT NOT NULL,
-  longitude FLOAT NOT NULL,
-  odr INTEGER NOT NULL,
-  FOREIGN KEY(route_id) REFERENCES routes(id)
-);
-
-DROP TABLE IF EXISTS place_images;
-CREATE TABLE place_images (
-  id INTEGER PRIMARY KEY autoincrement,
-  route_id INTEGER NOT NULL,
-  place_id INTEGER NOT NULL,
-  original_file_name VARCHAR,
-  original_content_type VARCHAR,
-  taken_at DATETIME,
-  FOREIGN KEY(route_id) REFERENCES routes(id),
-  FOREIGN KEY(place_id) REFERENCES routes(id)
-);
-
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
   id INTEGER PRIMARY KEY autoincrement,
@@ -36,4 +5,41 @@ CREATE TABLE users (
   email VARCHAR,
   name VARCHAR,
   password VARCHAR
+);
+
+DROP TABLE IF EXISTS routes;
+CREATE TABLE routes (
+  id INTEGER PRIMARY KEY autoincrement,
+  user_id INTEGER NOT NULL,
+  name VARCHAR NOT NULL,
+  deleted BOOLEAN NOT NULL DEFAULT 0,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+DROP TABLE IF EXISTS places;
+CREATE TABLE places (
+  id INTEGER PRIMARY KEY autoincrement,
+  user_id INTEGER NOT NULL,
+  route_id INTEGER NOT NULL,
+  name VARCHAR NOT NULL,
+  address VARCHAR,
+  latitude FLOAT NOT NULL,
+  longitude FLOAT NOT NULL,
+  odr INTEGER NOT NULL,
+  FOREIGN KEY(route_id) REFERENCES routes(id),
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+DROP TABLE IF EXISTS place_images;
+CREATE TABLE place_images (
+  id INTEGER PRIMARY KEY autoincrement,
+  route_id INTEGER NOT NULL,
+  place_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  original_file_name VARCHAR,
+  original_content_type VARCHAR,
+  taken_at DATETIME,
+  FOREIGN KEY(route_id) REFERENCES routes(id),
+  FOREIGN KEY(place_id) REFERENCES routes(id),
+  FOREIGN KEY(user_id) REFERENCES users(id)
 );
