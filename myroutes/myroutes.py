@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash, jsonify
@@ -119,9 +120,10 @@ def save_image_file(data, db, place):
   content_type_last_pos = data.find(b'\r\n', content_type_first_pos)
   content_type = data[content_type_first_pos:content_type_last_pos].decode('utf-8')
 
+  user_id = flask_login.current_user.id
   cur = db.execute(
-    'INSERT INTO place_images (route_id, place_id, original_file_name, original_content_type) VALUES (?,?,?,?)',
-    (place['route_id'], place['id'], file_name, content_type)
+    'INSERT INTO place_images (route_id, place_id, original_file_name, original_content_type, user_id) VALUES (?,?,?,?,?)',
+    (place['route_id'], place['id'], file_name, content_type, user_id)
   )
   db.commit()
 
@@ -154,12 +156,13 @@ def save_image_file(data, db, place):
       break
   exif = dict(image._getexif().items())
 
-  if exif[orientation] == 3:
-    image = image.rotate(180, expand=True)
-  elif exif[orientation] == 6:
-    image = image.rotate(270, expand=True)
-  elif exif[orientation] == 8:
-    image = image.rotate(90, expand=True)
+  if orientation in exif:
+    if exif[orientation] == 3:
+      image = image.rotate(180, expand=True)
+    elif exif[orientation] == 6:
+      image = image.rotate(270, expand=True)
+    elif exif[orientation] == 8:
+      image = image.rotate(90, expand=True)
 
   image.save(path, extension)
 
@@ -372,7 +375,11 @@ def delete_place_image(image_id):
   cur = db.execute('SELECT * FROM place_images WHERE id = ?', (image_id,))
   image = fetchone(cur)
 
-  delete_image_file(image)
+  try:
+    delete_image_file(image)
+  except:
+    print("Unexpected error:", sys.exc_info()[0])
+    pass
 
   cur = db.execute('DELETE FROM place_images WHERE id = ?', (image_id,))
   db.commit()
