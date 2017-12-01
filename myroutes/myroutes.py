@@ -272,14 +272,15 @@ def route(route_id):
 @flask_login.login_required
 def create_route():
   request_data = request.get_json(silent=True)
+  user_id = flask_login.current_user.id
   db = get_db()
-  cur = db.execute('INSERT INTO routes (name, user_id) VALUES (?, ?)', (request_data['name'], flask_login.current_user.id))
+  cur = db.execute('INSERT INTO routes (name, user_id) VALUES (?, ?)', (request_data['name'], user_id))
   db.commit()
 
   for place in request_data['places']:
     db.execute(
-      'INSERT INTO places (route_id, name, latitude, longitude, odr) VALUES (?,?,?,?,?)',
-      (cur.lastrowid, place['name'], place['latitude'], place['longitude'], place['order']))
+      'INSERT INTO places (route_id, name, latitude, longitude, odr, user_id) VALUES (?,?,?,?,?,?)',
+      (cur.lastrowid, place['name'], place['latitude'], place['longitude'], place['order'], user_id))
 
   db.commit()
 
