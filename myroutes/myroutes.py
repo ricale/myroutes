@@ -255,7 +255,6 @@ def routes():
   ))
 
 @app.route('/routes/<route_id>', methods=['GET'])
-@flask_login.login_required
 def route(route_id):
   db = get_db()
   cur = db.execute('SELECT * FROM routes WHERE id = ?', (route_id,))
@@ -263,7 +262,11 @@ def route(route_id):
   cur = db.execute('SELECT * FROM places WHERE route_id = ? ORDER BY odr', (route_id,))
   places = fetchall(cur)
 
+  for place in places:
+    place['images'] = fetch_place_images(db, place['id'])
+
   route['places'] = places
+
   route['images'] = fetch_route_images(db, route_id)
 
   return jsonify(dict(
@@ -293,6 +296,7 @@ def create_route():
   ))
 
 @app.route('/routes/<route_id>', methods=['PUT'])
+@flask_login.login_required
 def update_route(route_id):
   request_data = request.get_json(silent=True)
   db = get_db()
@@ -328,6 +332,7 @@ def update_route(route_id):
   ))
 
 @app.route('/routes/<route_id>', methods=['DELETE'])
+@flask_login.login_required
 def delete_route(route_id):
   db = get_db()
   db.execute(
@@ -356,6 +361,7 @@ def place(place_id):
   ))
 
 @app.route('/places/<place_id>/images', methods=['POST'])
+@flask_login.login_required
 def create_place_image(place_id):
   db = get_db()
   cur = db.execute('SELECT * FROM places WHERE id = ?', (place_id,))
@@ -370,6 +376,7 @@ def create_place_image(place_id):
   ))
 
 @app.route('/place_images/<image_id>', methods=['DELETE'])
+@flask_login.login_required
 def delete_place_image(image_id):
   db = get_db()
   cur = db.execute('SELECT * FROM place_images WHERE id = ?', (image_id,))
