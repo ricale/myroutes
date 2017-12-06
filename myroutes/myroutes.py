@@ -24,7 +24,7 @@ app.config.update(dict(
 ))
 app.config.from_envvar('MYROUTES_SETTINGS', silent=True)
 
-cors = CORS(app, resources={r"*": {"origins": "*"}})
+cors = CORS(app, origins=r"http://localhost:8080|http://myroutes\.ricalest\.net")
 
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
