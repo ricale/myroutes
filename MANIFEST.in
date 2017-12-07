@@ -1,3 +1,0 @@
-graft myroutes/templates
-graft myroutes/static
-include myroutes/schema.sql
