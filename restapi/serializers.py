@@ -10,7 +10,7 @@ class RouteSerializer(serializers.HyperlinkedModelSerializer):
 
   class Meta:
     model = Route
-    fields = ('url', 'id', 'owner', 'name', 'deleted')
+    fields = ('url', 'id', 'owner', 'places', 'place_images', 'name', 'deleted')
 
 class PlaceSerializer(serializers.HyperlinkedModelSerializer):
   owner = serializers.ReadOnlyField(source='owner.username')
@@ -21,7 +21,7 @@ class PlaceSerializer(serializers.HyperlinkedModelSerializer):
   class Meta:
     model = Place
     fields = ('url', 'id', 'owner', 'route',
-              'name', 'address', 'latitude', 'longitude', 'odr')
+              'name', 'address', 'latitude', 'longitude', 'odr', 'place_images')
 
 class PlaceImageSerializer(serializers.HyperlinkedModelSerializer):
   owner = serializers.ReadOnlyField(source='owner.username')

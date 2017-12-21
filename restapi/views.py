@@ -1,5 +1,5 @@
 from rest_framework import generics, permissions, renderers, viewsets
-from rest_framework.decorators import detail_route
+from rest_framework.decorators import detail_route, list_route
 from rest_framework.response import Response
 from restapi.models import Route, Place, PlaceImage
 from restapi.serializers import RouteSerializer, PlaceSerializer, PlaceImageSerializer, UserSerializer
@@ -14,6 +14,9 @@ class RouteViewSet(viewsets.ModelViewSet):
   queryset = Route.objects.all()
   serializer_class = RouteSerializer
   permission_class = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly,)
+
+  def perform_create(self, serializer):
+    serializer.save(owner=self.request.user)
 
 class PlaceViewSet(viewsets.ModelViewSet):
   queryset = Place.objects.all()
