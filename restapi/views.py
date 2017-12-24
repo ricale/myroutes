@@ -1,3 +1,4 @@
+import json
 from rest_framework import generics, permissions, viewsets, status
 from rest_framework.decorators import detail_route, list_route
 from rest_framework.response import Response
@@ -6,6 +7,7 @@ from restapi.serializers import RouteSerializer, PlaceSerializer, PlaceImageSeri
 from restapi.permissions import IsOwnerOrReadOnly
 from django.contrib.auth.models import User
 from django.shortcuts import render, get_object_or_404
+from django.http import QueryDict
 
 def root(request):
   return render(request, 'root.html')
@@ -17,6 +19,26 @@ class RouteViewSet(viewsets.ModelViewSet):
 
   def perform_create(self, serializer):
     serializer.save(owner=self.request.user)
+
+  def create(self, request, *args, **kwargs):
+    serializer = self.get_serializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    self.perform_create(serializer)
+
+    route = Route.objects.get(id=serializer.data['id'])
+
+    place_data = request.data.get('place_data')
+    if place_data:
+      for place in json.loads(place_data):
+        place['route_id'] = serializer.data['id']
+        qdict = QueryDict('', mutable=True)
+        qdict.update(place)
+        place_serializer = PlaceSerializer(data=qdict)
+        place_serializer.is_valid(raise_exception=True)
+        place_serializer.save(owner=self.request.user, route=route)
+
+    headers = self.get_success_headers(serializer.data)
+    return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 class PlaceViewSet(viewsets.ModelViewSet):
   queryset = Place.objects.all()
