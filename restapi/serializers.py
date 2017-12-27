@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
 
   class Meta:
     model = User
-    fields = ('url', 'id', 'username', 'routes', 'places', 'place_images')
+    fields = ('id', 'username', 'routes', 'places', 'place_images')
 
 class RouteSerializer(serializers.ModelSerializer):
   owner = serializers.ReadOnlyField(source='owner.username')
@@ -19,7 +19,7 @@ class RouteSerializer(serializers.ModelSerializer):
 
   class Meta:
     model = Route
-    fields = ('url', 'id', 'owner', 'places', 'place_images', 'name', 'deleted')
+    fields = ('id', 'owner', 'places', 'place_images', 'name', 'deleted')
 
 class PlaceSerializer(serializers.ModelSerializer):
   owner = serializers.ReadOnlyField(source='owner.username')
@@ -29,7 +29,7 @@ class PlaceSerializer(serializers.ModelSerializer):
 
   class Meta:
     model = Place
-    fields = ('url', 'id', 'owner', 'route',
+    fields = ('id', 'owner', 'route',
               'name', 'address', 'latitude', 'longitude', 'odr', 'place_images')
 
 class PlaceImageSerializer(serializers.ModelSerializer):
@@ -39,5 +39,5 @@ class PlaceImageSerializer(serializers.ModelSerializer):
 
   class Meta:
     model = PlaceImage
-    fields = ('url', 'id', 'owner', 'route', 'place',
+    fields = ('id', 'owner', 'route', 'place',
               'original_file_name', 'original_content_type', 'taken_at')
