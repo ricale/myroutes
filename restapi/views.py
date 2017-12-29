@@ -27,7 +27,7 @@ class RouteViewSet(viewsets.ModelViewSet):
 
     route_data = copy.deepcopy(serializer.data)
     route_data['places'] = PlaceSerializer(
-      Place.objects.filter(route_id=route.id),
+      Place.objects.filter(route_id=route.id).order_by('odr'),
       many=True
     ).data
 
@@ -53,6 +53,31 @@ class RouteViewSet(viewsets.ModelViewSet):
 
     headers = self.get_success_headers(serializer.data)
     return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+  def update(self, request, *args, **kwargs):
+    instance = self.get_object()
+    serializer = self.get_serializer(instance, data=request.data)
+    serializer.is_valid(raise_exception=True)
+    self.perform_update(serializer)
+
+    route = Route.objects.get(id=serializer.data['id'])
+    places = Place.objects.filter(route_id=serializer.data['id'])
+    place_data = request.data.get('places')
+
+    for data in place_data:
+      qdict = QueryDict('', mutable=True)
+      qdict.update(data)
+
+      place = [place for place in places if place.id == data['id']][0]
+      if place:
+        place_serializer = PlaceSerializer(place, data=qdict)
+      else:
+        place_serializer = PlaceSerializer(data=qdict)
+
+      place_serializer.is_valid(raise_exception=True)
+      place_serializer.save(owner=self.request.user, route=route)
+
+    return Response(serializer.data)
 
 class PlaceViewSet(viewsets.ModelViewSet):
   queryset = Place.objects.all()
