@@ -10,8 +10,8 @@ class Place(models.Model):
   route     = models.ForeignKey('restapi.Route', related_name='places', on_delete=models.CASCADE)
   name      = models.CharField(max_length=100, blank=True, default='')
   address   = models.TextField(null=True)
-  latitude  = models.DecimalField(max_digits=13, decimal_places=10)
-  longitude = models.DecimalField(max_digits=13, decimal_places=10)
+  latitude  = models.DecimalField(max_digits=18, decimal_places=15)
+  longitude = models.DecimalField(max_digits=18, decimal_places=15)
   odr       = models.IntegerField()
 
 class PlaceImage(models.Model):

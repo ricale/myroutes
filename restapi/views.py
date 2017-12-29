@@ -1,4 +1,5 @@
 import json
+import copy
 from rest_framework import generics, permissions, viewsets, status
 from rest_framework.decorators import detail_route, list_route
 from rest_framework.response import Response
@@ -20,6 +21,18 @@ class RouteViewSet(viewsets.ModelViewSet):
   def perform_create(self, serializer):
     serializer.save(owner=self.request.user)
 
+  def retrieve(self, request, *args, **kwargs):
+    route = self.get_object()
+    serializer = self.get_serializer(route)
+
+    route_data = copy.deepcopy(serializer.data)
+    route_data['places'] = PlaceSerializer(
+      Place.objects.filter(route_id=route.id),
+      many=True
+    ).data
+
+    return Response(route_data)
+
   def create(self, request, *args, **kwargs):
     serializer = self.get_serializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -27,9 +40,10 @@ class RouteViewSet(viewsets.ModelViewSet):
 
     route = Route.objects.get(id=serializer.data['id'])
 
-    place_data = request.data.get('place_data')
+    place_data = request.data.get('places')
+
     if place_data:
-      for place in json.loads(place_data):
+      for place in place_data:
         place['route_id'] = serializer.data['id']
         qdict = QueryDict('', mutable=True)
         qdict.update(place)
