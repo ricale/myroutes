@@ -8,17 +8,15 @@ logger = logging.getLogger('django.request')
 class ResponseFormattingMiddleware(MiddlewareMixin):
   def process_response(self, request, response):
     try:
-      print('request.method', request.method)
-      print('response', response)
       if request.method == 'GET' or request.content_type == 'application/json':
         response_format = {
-          'result': {},
+          'data': {},
           'success': is_success(response.status_code),
           'message': response.status_text
         }
 
         if hasattr(response, 'data') and getattr(response, 'data') is not None:
-          response_format.update({'result': response.data})
+          response_format.update({'data': response.data})
           data = response.data
 
           for key in response_format.keys():
