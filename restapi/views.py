@@ -61,17 +61,22 @@ class RouteViewSet(viewsets.ModelViewSet):
     self.perform_update(serializer)
 
     route = Route.objects.get(id=serializer.data['id'])
-    places = Place.objects.filter(route_id=serializer.data['id'])
+    place_records = Place.objects.filter(route_id=serializer.data['id'])
     place_data = request.data.get('places')
+    place_data_ids = [d['id'] for d in place_data if hasattr(d, 'id')]
+
+    for record in place_records:
+      if record.id not in place_data_ids:
+        record.delete()
 
     for data in place_data:
       qdict = QueryDict('', mutable=True)
       qdict.update(data)
 
-      place = [place for place in places if place.id == data['id']][0]
-      if place:
-        place_serializer = PlaceSerializer(place, data=qdict)
-      else:
+      try:
+        place = [p for p in place_records if p.id == data['id']][0]
+        place_serializer = PlaceSerializer(place[0], data=qdict)
+      except:
         place_serializer = PlaceSerializer(data=qdict)
 
       place_serializer.is_valid(raise_exception=True)
