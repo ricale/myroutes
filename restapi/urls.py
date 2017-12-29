@@ -11,6 +11,7 @@ urlpatterns = [
     'put': 'update',
     'delete': 'destroy'
   }), name='route-detail'),
+  url(r'^places/(?P<pk>[0-9]+)/$', PlaceViewSet.as_view({'get': 'retrieve'})),
   # url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
   url(r'^login/', obtain_jwt_token),
 ]

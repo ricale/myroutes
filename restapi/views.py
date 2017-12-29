@@ -89,10 +89,17 @@ class PlaceViewSet(viewsets.ModelViewSet):
   serializer_class = PlaceSerializer
   permission_class = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly,)
 
-  def perform_create(self, serializer):
-    route_id = self.request.data['route_id']
-    route = get_object_or_404(Route, id=route_id)
-    serializer.save(owner=self.request.user, route=route)
+  def retrieve(self, request, *args, **kwargs):
+    instance = self.get_object()
+    serializer = self.get_serializer(instance)
+
+    place_data = copy.deepcopy(serializer.data)
+    place_data['images'] = PlaceSerializer(
+      PlaceImage.objects.filter(place_id=instance.id),
+      many=True
+    ).data
+
+    return Response(place_data)
 
 class PlaceImageViewSet(viewsets.ModelViewSet):
   queryset = PlaceImage.objects.all()
