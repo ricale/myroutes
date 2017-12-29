@@ -14,23 +14,23 @@ class UserSerializer(serializers.ModelSerializer):
 class RouteSerializer(serializers.ModelSerializer):
   owner = serializers.ReadOnlyField(source='owner.username')
 
-  places       = serializers.PrimaryKeyRelatedField(many=True, queryset=Place.objects.all(), allow_null=True)
-  place_images = serializers.PrimaryKeyRelatedField(many=True, queryset=PlaceImage.objects.all(), allow_null=True)
+  # places       = serializers.PrimaryKeyRelatedField(many=True, queryset=Place.objects.all(), allow_null=True)
+  # place_images = serializers.PrimaryKeyRelatedField(many=True, queryset=PlaceImage.objects.all(), allow_null=True)
 
   class Meta:
     model = Route
-    fields = ('id', 'owner', 'places', 'place_images', 'name', 'deleted')
+    fields = ('id', 'owner', 'name', 'deleted')
 
 class PlaceSerializer(serializers.ModelSerializer):
   owner = serializers.ReadOnlyField(source='owner.username')
   route = serializers.ReadOnlyField(source='route.id')
 
-  place_images = serializers.PrimaryKeyRelatedField(many=True, queryset=PlaceImage.objects.all(), allow_null=True)
+  # place_images = serializers.PrimaryKeyRelatedField(many=True, queryset=PlaceImage.objects.all(), allow_null=True)
 
   class Meta:
     model = Place
     fields = ('id', 'owner', 'route',
-              'name', 'address', 'latitude', 'longitude', 'odr', 'place_images')
+              'name', 'address', 'latitude', 'longitude', 'odr')
 
 class PlaceImageSerializer(serializers.ModelSerializer):
   owner = serializers.ReadOnlyField(source='owner.username')
