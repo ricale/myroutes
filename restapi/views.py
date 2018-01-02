@@ -3,6 +3,8 @@ import copy
 from rest_framework import generics, permissions, viewsets, status
 from rest_framework.decorators import detail_route, list_route
 from rest_framework.response import Response
+from rest_framework.parsers import FileUploadParser, MultiPartParser, FormParser
+from rest_framework.views import APIView
 from restapi.models import Route, Place, PlaceImage
 from restapi.serializers import RouteSerializer, PlaceSerializer, PlaceImageSerializer, UserSerializer
 from restapi.permissions import IsOwnerOrReadOnly
@@ -94,7 +96,7 @@ class PlaceViewSet(viewsets.ModelViewSet):
     serializer = self.get_serializer(instance)
 
     place_data = copy.deepcopy(serializer.data)
-    place_data['images'] = PlaceSerializer(
+    place_data['images'] = PlaceImageSerializer(
       PlaceImage.objects.filter(place_id=instance.id),
       many=True
     ).data
@@ -105,6 +107,19 @@ class PlaceImageViewSet(viewsets.ModelViewSet):
   queryset = PlaceImage.objects.all()
   serializer_class = PlaceImageSerializer
   permission_class = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly,)
+  parser_classes = (FileUploadParser,)
+
+  def perform_create(self, serializer, place):
+    serializer.save(owner=self.request.user, route=place.route, place=place)
+
+  def create(self, request, *args, **kwargs):
+    qdict = QueryDict('', mutable=True)
+    qdict.update(dict(image=request.data['file']))
+    serializer = self.get_serializer(data=qdict)
+    serializer.is_valid(raise_exception=True)
+    place = Place.objects.get(id=kwargs['place_id'])
+    self.perform_create(serializer, place)
+    return Response(serializer.data)
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
   queryset = User.objects.all()

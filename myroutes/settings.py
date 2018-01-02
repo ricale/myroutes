@@ -17,6 +17,8 @@ from corsheaders.defaults import default_headers
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+MEDIA_URL = '/public/images/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'public/image')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
@@ -154,5 +156,6 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = default_headers + (
     'csrftoken',
     'X_CSRF_TOKEN',
-    'Cache-Control'
+    'Cache-Control',
+    'Content-Disposition'
 )

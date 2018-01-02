@@ -15,9 +15,8 @@ class Place(models.Model):
   odr       = models.IntegerField()
 
 class PlaceImage(models.Model):
-  owner                 = models.ForeignKey('auth.User',     related_name='place_images', on_delete=models.CASCADE)
-  route                 = models.ForeignKey('restapi.Route', related_name='place_images', on_delete=models.CASCADE)
-  place                 = models.ForeignKey('restapi.Place', related_name='place_images', on_delete=models.CASCADE)
-  original_file_name    = models.CharField(max_length=256)
-  original_content_type = models.CharField(max_length=100)
-  taken_at              = models.DateTimeField(auto_now_add=True)
+  owner    = models.ForeignKey('auth.User',     related_name='place_images', on_delete=models.CASCADE)
+  route    = models.ForeignKey('restapi.Route', related_name='place_images', on_delete=models.CASCADE)
+  place    = models.ForeignKey('restapi.Place', related_name='place_images', on_delete=models.CASCADE)
+  image    = models.ImageField(null=True)
+  taken_at = models.DateTimeField(auto_now_add=True)

@@ -29,7 +29,7 @@ class PlaceSerializer(serializers.ModelSerializer):
 
   class Meta:
     model = Place
-    fields = ('id', 'owner', 'route',
+    fields = ('id', 'owner', 'route', 'route_id',
               'name', 'address', 'latitude', 'longitude', 'odr')
 
 class PlaceImageSerializer(serializers.ModelSerializer):
@@ -37,7 +37,9 @@ class PlaceImageSerializer(serializers.ModelSerializer):
   route = serializers.ReadOnlyField(source='route.id')
   place = serializers.ReadOnlyField(source='place.id')
 
+  image = serializers.ImageField(use_url=True)
+
   class Meta:
     model = PlaceImage
     fields = ('id', 'owner', 'route', 'place',
-              'original_file_name', 'original_content_type', 'taken_at')
+              'image', 'taken_at')
