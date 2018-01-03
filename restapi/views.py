@@ -1,6 +1,9 @@
 import json
 import copy
 import os
+import string
+from pytz import timezone
+from datetime import datetime
 from PIL import Image, ExifTags
 from django.contrib.auth.models import User
 from django.shortcuts import render
@@ -13,8 +16,19 @@ from restapi.models import Route, Place, PlaceImage
 from restapi.serializers import RouteSerializer, PlaceSerializer, PlaceImageSerializer, UserSerializer
 from restapi.permissions import IsOwnerOrReadOnly
 
-def get_place_data():
-  return
+def get_place_image_data(place_id):
+  data = PlaceImageSerializer(
+    PlaceImage.objects.filter(place_id=place_id).order_by('taken_at'),
+    many=True
+  ).data
+
+  for d in data:
+    thumbnail1_url = '{0}{1}'.format(settings.MEDIA_URL, 'thumbnail1/')
+    d['thumbnail1'] = d['image'].replace(settings.MEDIA_URL, thumbnail1_url)
+    thumbnail2_url = '{0}{1}'.format(settings.MEDIA_URL, 'thumbnail2/')
+    d['thumbnail2'] = d['image'].replace(settings.MEDIA_URL, thumbnail2_url)
+
+  return data
 
 class RouteViewSet(viewsets.ModelViewSet):
   queryset = Route.objects.all()
@@ -32,10 +46,7 @@ class RouteViewSet(viewsets.ModelViewSet):
     ).data
 
     for place in data['places']:
-      place['images'] = PlaceImageSerializer(
-        PlaceImage.objects.filter(place_id=place['id']),
-        many=True
-      ).data
+      place['images'] = get_place_image_data(place['id'])
 
     return data
 
@@ -103,10 +114,7 @@ class PlaceViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
   def get_data_and_related(self, serializer):
     data = copy.deepcopy(serializer.data)
-    data['images'] = PlaceImageSerializer(
-      PlaceImage.objects.filter(place_id=data['id']),
-      many=True
-    ).data
+    data['images'] = get_place_image_data(data['id'])
     return data
 
   def retrieve(self, request, *args, **kwargs):
@@ -135,6 +143,22 @@ class PlaceImageViewSet(viewsets.ModelViewSet):
 
     absolute_path = os.path.join(settings.MEDIA_ROOT, image_filename)
     image = Image.open(absolute_path)
+    exif = image._getexif()
+    if 36867 in exif:
+      taken_at = exif[36867]
+    elif 306 in exif:
+      taken_at = exif[306]
+    else:
+      taken_at = None
+
+    if taken_at is not None:
+      place_image = PlaceImage.objects.get(id=serializer.data['id'])
+      taken_datetime = datetime.strptime(taken_at, '%Y:%m:%d %H:%M:%S')
+      if taken_datetime.strftime('%z') == '':
+        tz = timezone('Asia/Seoul')
+        taken_datetime = tz.localize(taken_datetime)
+      place_image.taken_at = taken_datetime
+      place_image.save()
 
     for orientation in ExifTags.TAGS.keys():
       if ExifTags.TAGS[orientation] == 'Orientation':
