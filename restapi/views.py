@@ -1,19 +1,17 @@
 import json
 import copy
-from rest_framework import generics, permissions, viewsets, status
-from rest_framework.decorators import detail_route, list_route
+from django.contrib.auth.models import User
+from django.shortcuts import render
+from django.http import QueryDict
+from rest_framework import permissions, viewsets, status, mixins
 from rest_framework.response import Response
-from rest_framework.parsers import FileUploadParser, MultiPartParser, FormParser
-from rest_framework.views import APIView
+from rest_framework.parsers import FileUploadParser
 from restapi.models import Route, Place, PlaceImage
 from restapi.serializers import RouteSerializer, PlaceSerializer, PlaceImageSerializer, UserSerializer
 from restapi.permissions import IsOwnerOrReadOnly
-from django.contrib.auth.models import User
-from django.shortcuts import render, get_object_or_404
-from django.http import QueryDict
 
-def root(request):
-  return render(request, 'root.html')
+def get_place_data():
+  return
 
 class RouteViewSet(viewsets.ModelViewSet):
   queryset = Route.objects.all()
@@ -23,48 +21,35 @@ class RouteViewSet(viewsets.ModelViewSet):
   def perform_create(self, serializer):
     serializer.save(owner=self.request.user)
 
-  def retrieve(self, request, *args, **kwargs):
-    route = self.get_object()
-    serializer = self.get_serializer(route)
-
-    route_data = copy.deepcopy(serializer.data)
-    route_data['places'] = PlaceSerializer(
-      Place.objects.filter(route_id=route.id).order_by('odr'),
+  def get_data_and_related(self, serializer):
+    data = copy.deepcopy(serializer.data)
+    data['places'] = PlaceSerializer(
+      Place.objects.filter(route_id=serializer.data['id']).order_by('odr'),
       many=True
     ).data
+    for place in data['places']:
+      place['images'] = PlaceImageSerializer(
+        PlaceImage.objects.filter(place_id=place['id']),
+        many=True
+      ).data
+    return data
 
-    return Response(route_data)
-
-  def create(self, request, *args, **kwargs):
-    serializer = self.get_serializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    self.perform_create(serializer)
-
+  def perform_create_places(self, serializer):
     route = Route.objects.get(id=serializer.data['id'])
 
-    place_data = request.data.get('places')
-
+    place_data = self.request.data.get('places')
     if place_data:
       for place in place_data:
-        place['route_id'] = serializer.data['id']
         qdict = QueryDict('', mutable=True)
         qdict.update(place)
         place_serializer = PlaceSerializer(data=qdict)
         place_serializer.is_valid(raise_exception=True)
         place_serializer.save(owner=self.request.user, route=route)
 
-    headers = self.get_success_headers(serializer.data)
-    return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-  def update(self, request, *args, **kwargs):
-    instance = self.get_object()
-    serializer = self.get_serializer(instance, data=request.data)
-    serializer.is_valid(raise_exception=True)
-    self.perform_update(serializer)
-
+  def perform_update_places(self, serializer):
     route = Route.objects.get(id=serializer.data['id'])
     place_records = Place.objects.filter(route_id=serializer.data['id'])
-    place_data = request.data.get('places')
+    place_data = self.request.data.get('places')
     place_data_ids = [d['id'] for d in place_data if hasattr(d, 'id')]
 
     for record in place_records:
@@ -84,24 +69,46 @@ class RouteViewSet(viewsets.ModelViewSet):
       place_serializer.is_valid(raise_exception=True)
       place_serializer.save(owner=self.request.user, route=route)
 
+  def retrieve(self, request, *args, **kwargs):
+    instance = self.get_object()
+    serializer = self.get_serializer(instance)
+    response_data = self.get_data_and_related(serializer)
+    return Response(response_data)
+
+  def create(self, request, *args, **kwargs):
+    serializer = self.get_serializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    self.perform_create(serializer)
+    self.perform_create_places(serializer)
+    headers = self.get_success_headers(serializer.data)
+    return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+  def update(self, request, *args, **kwargs):
+    instance = self.get_object()
+    serializer = self.get_serializer(instance, data=request.data)
+    serializer.is_valid(raise_exception=True)
+    self.perform_update(serializer)
+    self.perform_update_places(serializer)
     return Response(serializer.data)
 
-class PlaceViewSet(viewsets.ModelViewSet):
+class PlaceViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
   queryset = Place.objects.all()
   serializer_class = PlaceSerializer
   permission_class = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly,)
 
-  def retrieve(self, request, *args, **kwargs):
-    instance = self.get_object()
-    serializer = self.get_serializer(instance)
-
-    place_data = copy.deepcopy(serializer.data)
-    place_data['images'] = PlaceImageSerializer(
+  def get_data_and_related(self, serializer):
+    data = copy.deepcopy(serializer.data)
+    data['images'] = PlaceImageSerializer(
       PlaceImage.objects.filter(place_id=instance.id),
       many=True
     ).data
+    return data
 
-    return Response(place_data)
+  def retrieve(self, request, *args, **kwargs):
+    instance = self.get_object()
+    serializer = self.get_serializer(instance)
+    response_data = self.get_data_and_related(serializer)
+    return Response(response_data)
 
 class PlaceImageViewSet(viewsets.ModelViewSet):
   queryset = PlaceImage.objects.all()
@@ -115,6 +122,7 @@ class PlaceImageViewSet(viewsets.ModelViewSet):
   def create(self, request, *args, **kwargs):
     qdict = QueryDict('', mutable=True)
     qdict.update(dict(image=request.data['file']))
+
     serializer = self.get_serializer(data=qdict)
     serializer.is_valid(raise_exception=True)
     place = Place.objects.get(id=kwargs['place_id'])

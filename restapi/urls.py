@@ -6,7 +6,6 @@ from restapi import views
 from restapi.views import RouteViewSet, PlaceViewSet, PlaceImageViewSet
 
 urlpatterns = [
-  url(r'^$', views.root),
   url(r'^routes/$',                RouteViewSet.as_view({'get': 'list', 'post': 'create'})),
   url(r'^routes/(?P<pk>[0-9]+)/$', RouteViewSet.as_view({
     'get': 'retrieve',
