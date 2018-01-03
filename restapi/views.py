@@ -1,8 +1,11 @@
 import json
 import copy
+import os
+from PIL import Image, ExifTags
 from django.contrib.auth.models import User
 from django.shortcuts import render
 from django.http import QueryDict
+from django.conf import settings
 from rest_framework import permissions, viewsets, status, mixins
 from rest_framework.response import Response
 from rest_framework.parsers import FileUploadParser
@@ -125,6 +128,37 @@ class PlaceImageViewSet(viewsets.ModelViewSet):
     instance.image.delete()
     instance.delete()
 
+  def process_image(self, serializer):
+    image_path = serializer.data['image']
+    image_filename = image_path.split('/')[-1]
+    image_name, image_extension = image_filename.split('.')
+
+    absolute_path = os.path.join(settings.MEDIA_ROOT, image_filename)
+    image = Image.open(absolute_path)
+
+    for orientation in ExifTags.TAGS.keys():
+      if ExifTags.TAGS[orientation] == 'Orientation':
+        break
+    exif = dict(image._getexif().items())
+
+    if orientation in exif:
+      if exif[orientation] == 3:
+        image = image.rotate(180, expand=True)
+      elif exif[orientation] == 6:
+        image = image.rotate(270, expand=True)
+      elif exif[orientation] == 8:
+        image = image.rotate(90, expand=True)
+
+    image.save(absolute_path)
+
+    image.thumbnail((512, 512))
+    thumbnail1_absolute_path = os.path.join(settings.MEDIA_ROOT, 'thumbnail1/{0}.{1}'.format(image_name, image_extension))
+    image.save(thumbnail1_absolute_path)
+
+    image.thumbnail((128, 128))
+    thumbnail2_absolute_path = os.path.join(settings.MEDIA_ROOT, 'thumbnail2/{0}.{1}'.format(image_name, image_extension))
+    image.save(thumbnail2_absolute_path)
+
   def create(self, request, *args, **kwargs):
     qdict = QueryDict('', mutable=True)
     qdict.update(dict(image=request.data['file']))
@@ -133,6 +167,7 @@ class PlaceImageViewSet(viewsets.ModelViewSet):
     serializer.is_valid(raise_exception=True)
     place = Place.objects.get(id=kwargs['place_id'])
     self.perform_create(serializer, place)
+    self.process_image(serializer)
     return Response(serializer.data)
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
