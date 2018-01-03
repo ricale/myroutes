@@ -33,6 +33,7 @@ class PlaceSerializer(serializers.ModelSerializer):
               'name', 'address', 'latitude', 'longitude', 'odr')
 
 class PlaceImageSerializer(serializers.ModelSerializer):
+  id    = serializers.UUIDField(read_only=True)
   owner = serializers.ReadOnlyField(source='owner.username')
   route = serializers.ReadOnlyField(source='route.id')
   place = serializers.ReadOnlyField(source='place.id')
