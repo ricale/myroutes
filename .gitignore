@@ -104,5 +104,4 @@ venv.bak/
 .mypy_cache/
 
 
-myroutes/static/pictures
-myroutes/myroutes.db
+myroutes/public/images

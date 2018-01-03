@@ -16,7 +16,8 @@ urlpatterns = [
   url(r'^places/(?P<pk>[0-9]+)/$', PlaceViewSet.as_view({'get': 'retrieve'})),
   url(r'^places/(?P<place_id>[0-9]+)/images/$', PlaceImageViewSet.as_view({'post': 'create'})),
 
-  url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+  url(r'^place_images/(?P<pk>[0-9]+)/$', PlaceImageViewSet.as_view({'delete': 'destroy'})),
+
   url(r'^login/', obtain_jwt_token),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

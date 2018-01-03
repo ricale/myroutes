@@ -27,11 +27,13 @@ class RouteViewSet(viewsets.ModelViewSet):
       Place.objects.filter(route_id=serializer.data['id']).order_by('odr'),
       many=True
     ).data
+
     for place in data['places']:
       place['images'] = PlaceImageSerializer(
         PlaceImage.objects.filter(place_id=place['id']),
         many=True
       ).data
+
     return data
 
   def perform_create_places(self, serializer):
@@ -99,7 +101,7 @@ class PlaceViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
   def get_data_and_related(self, serializer):
     data = copy.deepcopy(serializer.data)
     data['images'] = PlaceImageSerializer(
-      PlaceImage.objects.filter(place_id=instance.id),
+      PlaceImage.objects.filter(place_id=data['id']),
       many=True
     ).data
     return data
@@ -118,6 +120,10 @@ class PlaceImageViewSet(viewsets.ModelViewSet):
 
   def perform_create(self, serializer, place):
     serializer.save(owner=self.request.user, route=place.route, place=place)
+
+  def perform_destroy(self, instance):
+    instance.image.delete()
+    instance.delete()
 
   def create(self, request, *args, **kwargs):
     qdict = QueryDict('', mutable=True)
