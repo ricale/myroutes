@@ -24,12 +24,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'public/images')
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '0ljcc&0io=@meg(pc+1gy9&)vrji#vz(t(2obvm+%7v4(n7nk#'
+# SECRET_KEY = '0ljcc&0io=@meg(pc+1gy9&)vrji#vz(t(2obvm+%7v4(n7nk#'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['myroutesapi.ricalest.net']
 
 
 # Application definition
@@ -76,21 +73,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'myroutes.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/2.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'private_block_django',
-        'USER': 'root',
-        'PASSWORD': 'asdf1234',
-        'HOST': 'localhost',
-        'PORT': '',
-    }
-}
 
 
 # Password validation
@@ -146,12 +128,6 @@ REST_FRAMEWORK = {
 JWT_AUTH = {
     'JWT_EXPIRATION_DELTA': datetime.timedelta(days=1),
 }
-
-CORS_ORIGIN_WHITELIST = [
-    'localhost:8080'
-]
-
-CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_HEADERS = default_headers + (
     'csrftoken',
