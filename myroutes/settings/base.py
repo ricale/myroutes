@@ -135,5 +135,3 @@ CORS_ALLOW_HEADERS = default_headers + (
     'Cache-Control',
     'Content-Disposition'
 )
-
-CORS_ORIGIN_WHITELIST = ('myroutes.ricalest.net',)
