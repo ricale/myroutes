@@ -26,7 +26,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'public/images')
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECRET_KEY = '0ljcc&0io=@meg(pc+1gy9&)vrji#vz(t(2obvm+%7v4(n7nk#'
 
-ALLOWED_HOSTS = ['myroutesapi.ricalest.net']
+ALLOWED_HOSTS = ['127.0.0.1', 'myroutesapi.ricalest.net']
 
 
 # Application definition

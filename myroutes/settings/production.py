@@ -1,5 +1,5 @@
-from mysite.settings.base import *
-from mysite.settings.secrets import *
+from myroutes.settings.base import *
+from myroutes.settings.secrets import *
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
