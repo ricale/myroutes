@@ -18,5 +18,8 @@ DATABASES = {
     }
 }
 
-CORS_ORIGIN_WHITELIST = ('myroutes.ricalest.net',)
+CORS_ORIGIN_WHITELIST = [
+  'myroutes.ricalest.net'
+]
+
 CORS_ALLOW_CREDENTIALS = True
