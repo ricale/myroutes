@@ -16,6 +16,12 @@ from restapi.models import Route, Place, PlaceImage
 from restapi.serializers import RouteSerializer, PlaceSerializer, PlaceImageSerializer, UserSerializer
 from restapi.permissions import IsOwnerOrReadOnly
 
+def get_thumbnail1_path(filename):
+  return '{0}{1}{2}'.format(settings.MEDIA_ROOT, '/thumbnail1/', filename)
+
+def get_thumbnail2_path(filename):
+  return '{0}{1}{2}'.format(settings.MEDIA_ROOT, '/thumbnail2/', filename)
+
 def get_place_image_data(place_id):
   data = PlaceImageSerializer(
     PlaceImage.objects.filter(place_id=place_id).order_by('taken_at'),
@@ -133,6 +139,10 @@ class PlaceImageViewSet(viewsets.ModelViewSet):
     serializer.save(owner=self.request.user, route=place.route, place=place)
 
   def perform_destroy(self, instance):
+    thumbnail1_path = get_thumbnail1_path(instance.image)
+    os.remove(thumbnail1_path)
+    thumbnail2_path = get_thumbnail2_path(instance.image)
+    os.remove(thumbnail2_path)
     instance.image.delete()
     instance.delete()
 

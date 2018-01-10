@@ -105,4 +105,5 @@ venv.bak/
 
 
 public/images
+myroutes/public/images
 myroutes/settings/secrets.py
